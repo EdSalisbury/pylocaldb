@@ -10,7 +10,6 @@ setup(
     long_description_content_type='text/markdown',
     license='MIT',
     url='https://github.com/edsalisbury/pylocaldb',
-    version='0.1',
     packages=find_packages(),
     classifiers=[
         'License :: OSI Approved :: MIT License',
