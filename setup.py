@@ -2,6 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='localdb',
+    version='1.0.0',
     description='Wrapper for local databases.',
     author='Ed Salisbury',
     author_email='ed.salisbury@gmail.com',
