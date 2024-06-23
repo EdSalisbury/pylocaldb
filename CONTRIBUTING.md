@@ -1,4 +1,4 @@
-# Contributing to MediaManager
+# Contributing to pylocaldb
 
 Thank you for considering contributing to pylocaldb! We appreciate your help in improving the project.
 
