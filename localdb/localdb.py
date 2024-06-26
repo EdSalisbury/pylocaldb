@@ -17,14 +17,12 @@ class LocalDB:
         logger (logging.Logger): Logger instance for logging errors and debug messages.
     """
 
-    def __init__(self, db_path, logger):
+    def __init__(self, db_path):
         """
         Initialize the LocalDB instance.
 
         Args:
             db_path (str): The path to the database file.
-            logger (logging.Logger, optional): Logger instance for logging errors and debug messages.
-                If not provided, a logger named after the current module is used.
         """
         self.db_path = db_path
         self.db = None
