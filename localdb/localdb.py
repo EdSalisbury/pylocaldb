@@ -4,6 +4,7 @@ import pickle
 import threading
 import traceback
 
+logger = logging.getLogger(__name__)
 
 class LocalDB:
     """
@@ -28,7 +29,6 @@ class LocalDB:
         self.db_path = db_path
         self.db = None
         self.lock = threading.Lock()
-        self.logger = logger or logging.getLogger(__name__)
 
     def __enter__(self):
         """
@@ -44,9 +44,9 @@ class LocalDB:
             self.db = dbm.open(self.db_path, 'c')
             return self
         except Exception as e:
-            self.logger.critical(f"Error opening database: {e}")
+            logger.critical(f"Error opening database: {e}")
             # Log the full traceback for debugging
-            self.logger.critical(traceback.format_exc())
+            logger.critical(traceback.format_exc())
             raise
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -106,7 +106,7 @@ class LocalDB:
                 return self._deserialize(
                     serialized_value) if serialized_value else None
             except Exception as e:
-                self.logger.error(f"Error loading value for {key}: {e}")
+                logger.error(f"Error loading value for {key}: {e}")
                 return None
 
     def save_value(self, key, value):
@@ -130,5 +130,5 @@ class LocalDB:
                 self.db[serialized_key] = serialized_value
                 return True
             except Exception as e:
-                self.logger.error(f"Error saving value for {key}: {e}")
+                logger.error(f"Error saving value for {key}: {e}")
                 return False
