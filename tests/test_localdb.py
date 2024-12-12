@@ -14,7 +14,7 @@ class TestLocalDB(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.db_path = os.path.join(self.temp_dir.name, 'test.db')
         self.logger = logging.getLogger('test_logger')
-        self.local_db = LocalDB(self.db_path, self.logger)
+        self.local_db = LocalDB(self.db_path)
 
     def tearDown(self):
         self.local_db.__exit__(None, None, None)  # Ensure database is closed

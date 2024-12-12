@@ -1,4 +1,5 @@
 import dbm
+import sqlite3
 import logging
 import pickle
 import threading
@@ -6,31 +7,29 @@ import traceback
 
 logger = logging.getLogger(__name__)
 
+
 class LocalDB:
     """
-    A class for managing a local database using dbm with pickle serialization.
-
-    Attributes:
-        db_path (str): The path to the database file.
-        db: The dbm database object.
-        lock (threading.Lock): A lock for thread-safe access to the database.
-        logger (logging.Logger): Logger instance for logging errors and debug messages.
+    A class for managing a local database using either dbm with pickle serialization
+    or SQLite3.
     """
 
-    def __init__(self, db_path):
+    def __init__(self, db_path, db_type="dbm"):
         """
         Initialize the LocalDB instance.
 
         Args:
             db_path (str): The path to the database file.
+            db_type (str): Type of the database ('dbm' or 'sqlite3').
         """
         self.db_path = db_path
+        self.db_type = db_type
         self.db = None
         self.lock = threading.Lock()
 
     def __enter__(self):
         """
-        Enter method for context management. Opens the database.
+        Enter method for context management. Opens the database based on the db_type.
 
         Returns:
             LocalDB: The LocalDB instance.
@@ -39,7 +38,13 @@ class LocalDB:
             Exception: If there's an error opening the database.
         """
         try:
-            self.db = dbm.open(self.db_path, 'c')
+            if self.db_type == "dbm":
+                self.db = dbm.open(self.db_path, "c")
+            elif self.db_type == "sqlite3":
+                self.db = sqlite3.connect(self.db_path)
+                self._create_sqlite_table()
+            else:
+                raise ValueError("Unsupported db_type. Use 'dbm' or 'sqlite3'.")
             return self
         except Exception as e:
             logger.critical(f"Error opening database: {e}")
@@ -57,7 +62,11 @@ class LocalDB:
             exc_tb: Exception traceback.
         """
         if self.db is not None:
-            self.db.close()
+            if self.db_type == "dbm":
+                self.db.close()
+            elif self.db_type == "sqlite3":
+                self.db.commit()
+                self.db.close()
             self.db = None  # Reset the database object after closing
 
     def _serialize(self, value):
@@ -84,6 +93,21 @@ class LocalDB:
         """
         return pickle.loads(value)
 
+    def _create_sqlite_table(self):
+        """
+        Creates the necessary table for SQLite if it doesn't exist.
+        """
+        cursor = self.db.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS data (
+                key TEXT PRIMARY KEY,
+                value BLOB
+            )
+        """
+        )
+        self.db.commit()
+
     def load_value(self, key):
         """
         Load a value from the database given a key.
@@ -99,10 +123,23 @@ class LocalDB:
         """
         with self.lock:
             try:
-                serialized_key = self._serialize(key)
-                serialized_value = self.db.get(serialized_key)
-                return self._deserialize(
-                    serialized_value) if serialized_value else None
+                if self.db_type == "dbm":
+                    serialized_key = self._serialize(key)
+                    serialized_value = self.db.get(serialized_key)
+                    return (
+                        self._deserialize(serialized_value)
+                        if serialized_value
+                        else None
+                    )
+
+                elif self.db_type == "sqlite3":
+                    cursor = self.db.cursor()
+                    cursor.execute("SELECT value FROM data WHERE key = ?", (key,))
+                    result = cursor.fetchone()
+                    if result:
+                        return self._deserialize(result[0])
+                    return None
+
             except Exception as e:
                 logger.error(f"Error loading value for {key}: {e}")
                 return None
@@ -125,8 +162,19 @@ class LocalDB:
             try:
                 serialized_key = self._serialize(key)
                 serialized_value = self._serialize(value)
-                self.db[serialized_key] = serialized_value
+
+                if self.db_type == "dbm":
+                    self.db[serialized_key] = serialized_value
+                elif self.db_type == "sqlite3":
+                    cursor = self.db.cursor()
+                    cursor.execute(
+                        "INSERT OR REPLACE INTO data (key, value) VALUES (?, ?)",
+                        (key, serialized_value),
+                    )
+                    self.db.commit()
+
                 return True
+
             except Exception as e:
                 logger.error(f"Error saving value for {key}: {e}")
                 return False
