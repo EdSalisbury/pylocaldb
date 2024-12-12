@@ -41,7 +41,7 @@ class LocalDB:
             if self.db_type == "dbm":
                 self.db = dbm.open(self.db_path, "c")
             elif self.db_type == "sqlite3":
-                self.db = sqlite3.connect(self.db_path)
+                self.db = sqlite3.connect(self.db_path, check_same_thread=False)
                 self._create_sqlite_table()
             else:
                 raise ValueError("Unsupported db_type. Use 'dbm' or 'sqlite3'.")
